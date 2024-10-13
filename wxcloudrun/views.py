@@ -76,8 +76,8 @@ def count():
 
 @app.route('/api/wechat_login', methods=['POST'])
 def wechat_login():
-    APP_ID = "wx64aad3ec90af5e83"
-    APP_SECRET = "4de3aa810356626fb97c2d1a98e438df"
+    APP_ID = "wx8446265bd2d968e9"
+    APP_SECRET = "dfddc06c807106ae6d67b639dcd926a4"
          
     code = request.json.get('code')
 
