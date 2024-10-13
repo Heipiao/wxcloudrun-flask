@@ -9,7 +9,7 @@ import jwt
 from flask import Flask, request, jsonify, session
 import logging
 from datetime import datetime, timezone, timedelta
-from user import UserManager 
+from wxcloudrun.user import UserManager 
 user_manager = UserManager()
 JWT_SECRET = 'your-jwt-secret'  # 替换为实际的 JWT 密钥
 JWT_EXPIRATION_HOURS = 24 * 7
