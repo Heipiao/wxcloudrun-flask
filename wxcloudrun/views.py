@@ -78,38 +78,38 @@ def count():
 def wechat_login():
     APP_ID = "wx8446265bd2d968e9"
     APP_SECRET = "dfddc06c807106ae6d67b639dcd926a4"
-         
+    
     code = request.json.get('code')
 
     if not code:
-        return jsonify({'error': 'Missing code'}), 400
+        return jsonify({'success': False, 'msg': 'Missing code'}), 400
 
-        # 调用微信API，获取 openid 和 session_key
+    # 调用微信API，获取 openid 和 session_key
     url = f"https://api.weixin.qq.com/sns/jscode2session?appid={APP_ID}&secret={APP_SECRET}&js_code={code}&grant_type=authorization_code"
-            
     response = requests.get(url)
     data = response.json()
 
     if 'errcode' in data:
-        return jsonify({'error': 'WeChat login failed', 'details': data}), 400
+        return jsonify({'success': False, 'msg': 'WeChat login failed', 'details': data}), 400
 
     openid = data['openid']
     session_key = data['session_key']
 
-            # 查找用户是否已经存在
+    # 查找用户是否已经存在
     user = user_manager.find_user_by_openid(openid)
     if user:
-                # 如果用户存在，则更新登录时间并设置 session
+        # 如果用户存在，则更新登录时间并设置 session
         user_manager.login_user(user)
         token = generate_token(openid)
-        return jsonify({'message': 'Login successful', 'nickname': user['nickname'], 'avatar': user['avatar'],'token':token})
-    else:       
+        return jsonify({'success': True, 'msg': 'Login successful', 'token': token, 'nickname': user['nickname']})
+    else:
         nickname = request.json.get('nickname', '默认昵称')
         avatar = request.json.get('avatar', '')
 
         new_user = user_manager.register_user(openid, nickname, avatar)
         if new_user:
             user_manager.login_user(new_user)
-            return jsonify({'message': 'Registration and login successful', 'nickname': new_user['nickname'], 'avatar': new_user['avatar']})
+            token = generate_token(openid)
+            return jsonify({'success': True, 'msg': 'Registration and login successful', 'token': token, 'nickname': new_user['nickname']})
         else:
-            return jsonify({'error': 'Registration failed'}), 500
+            return jsonify({'success': False, 'msg': 'Registration failed'}), 500
