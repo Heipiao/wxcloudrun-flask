@@ -1,18 +1,25 @@
 from datetime import datetime
-from flask import render_template, request
+from flask import render_template, request, Flask, request, jsonify, session
 from run import app
 from wxcloudrun.dao import delete_counterbyid, query_counterbyid, insert_counter, update_counterbyid
 from wxcloudrun.model import Counters
 from wxcloudrun.response import make_succ_empty_response, make_succ_response, make_err_response
+from wxcloudrun.DeviceRoleManager import DeviceRoleManager
 import requests
 import jwt
-from flask import Flask, request, jsonify, session
 import logging
 from datetime import datetime, timezone, timedelta
+from functools import wraps
+
 from wxcloudrun.user import UserManager 
 user_manager = UserManager()
+device_manager = DeviceRoleManager()
 JWT_SECRET = 'your-jwt-secret'  # 替换为实际的 JWT 密钥
 JWT_EXPIRATION_HOURS = 24 * 7
+# 微信小程序配置
+APP_ID = "wx8446265bd2d968e9"
+APP_SECRET = "dfddc06c807106ae6d67b639dcd926a4"
+
 
 def generate_token(openid):
     """生成 JWT token"""
@@ -22,6 +29,22 @@ def generate_token(openid):
     }
     token = jwt.encode(payload, JWT_SECRET, algorithm='HS256')
     return token
+# JWT 装饰器，检查 token
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = request.headers.get('Authorization')
+        if not token:
+            return jsonify({'message': 'Token is missing!'}), 403
+        try:
+            token = token.replace("Bearer ", "")  # 去除 "Bearer " 前缀
+            jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
+        except jwt.ExpiredSignatureError:
+            return jsonify({'message': 'Token has expired!'}), 403
+        except jwt.InvalidTokenError:
+            return jsonify({'message': 'Invalid token!'}), 403
+        return f(*args, **kwargs)
+    return decorated
 
 @app.route('/')
 def index():
@@ -30,55 +53,8 @@ def index():
     """
     return render_template('index.html')
 
-
-@app.route('/api/count', methods=['POST'])
-def count():
-    """
-    :return:计数结果/清除结果
-    """
-
-    # 获取请求体参数
-    params = request.get_json()
-
-    # 检查action参数
-    if 'action' not in params:
-        return make_err_response('缺少action参数')
-
-    # 按照不同的action的值，进行不同的操作
-    action = params['action']
-
-    # 执行自增操作
-    if action == 'inc':
-        counter = query_counterbyid(1)
-        if counter is None:
-            counter = Counters()
-            counter.id = 1
-            counter.count = 1
-            counter.created_at = datetime.now()
-            counter.updated_at = datetime.now()
-            insert_counter(counter)
-        else:
-            counter.id = 1
-            counter.count += 1
-            counter.updated_at = datetime.now()
-            update_counterbyid(counter)
-        return make_succ_response(counter.count)
-
-    # 执行清0操作
-    elif action == 'clear':
-        delete_counterbyid(1)
-        return make_succ_empty_response()
-
-    # action参数错误
-    else:
-        return make_err_response('action参数错误')
-
-
 @app.route('/api/wechat_login', methods=['POST'])
 def wechat_login():
-    APP_ID = "wx8446265bd2d968e9"
-    APP_SECRET = "dfddc06c807106ae6d67b639dcd926a4"
-    
     code = request.json.get('code')
 
     if not code:
@@ -101,15 +77,30 @@ def wechat_login():
         # 如果用户存在，则更新登录时间并设置 session
         user_manager.login_user(user)
         token = generate_token(openid)
-        return jsonify({'success': True, 'msg': 'Login successful', 'token': token, 'nickname': user['nickname']})
+        return jsonify({'success': True, 'msg': 'Login successful', 'token': token, 'nickname': user['nick_name']})
     else:
-        nickname = request.json.get('nickname', '默认昵称')
-        avatar = request.json.get('avatar', '')
+        nick_name = request.json.get('nickname', '默认昵称')
 
-        new_user = user_manager.register_user(openid, nickname, avatar)
+        new_user = user_manager.register_user(openid, nick_name)
         if new_user:
             user_manager.login_user(new_user)
             token = generate_token(openid)
-            return jsonify({'success': True, 'msg': 'Registration and login successful', 'token': token, 'nickname': new_user['nickname']})
+            return jsonify({'success': True, 'msg': 'Registration and login successful', 'token': token, 'nickname': new_user['nick_name']})
         else:
             return jsonify({'success': False, 'msg': 'Registration failed'}), 500
+
+@app.route('/bind_device', methods=['POST'])
+@token_required  # 验证 token
+def bind_device():
+    data = request.json
+    openid = data.get('openid')
+    device_id = data.get('device_id')
+
+    if not openid or not device_id:
+        return jsonify({"message": "openid 和 device_id 是必需的"}), 400
+
+    result = device_manager.bind_user_device(openid, device_id)
+    if result:
+        return jsonify({"message": "绑定成功", "data": result})
+    else:
+        return jsonify({"message": "绑定失败"}), 500
