@@ -147,23 +147,6 @@ class DeviceRoleManager:
         finally:
             connection.close()
 
-    def delete_user_role(self, openid, mac_address):
-        """删除用户的角色绑定"""
-        connection = get_db_connection()
-        if connection is None:
-            return None
-        try:
-            with connection.cursor() as cursor:
-                sql = "DELETE FROM wechat_miniprogram_user_binding_role WHERE openid = %s AND mac_address = %s"
-                cursor.execute(sql, (openid, mac_address))
-                connection.commit()
-                logger.info(f"用户角色删除成功: openid={openid}, mac_address={mac_address}")
-        except Exception as e:
-            logger.error(f"删除用户角色失败: {str(e)}")
-            connection.rollback()
-        finally:
-            connection.close()
-    
     def add_user_role(self, openid, mac_address, role_id, device_quota):
         """Add a new user binding role."""
         self.cursor.execute("""
@@ -178,15 +161,6 @@ class DeviceRoleManager:
             SELECT * FROM wechat_miniprogram_user_binding_role WHERE openid = ?
         """, (openid,))
         return self.cursor.fetchone()
-
-    def update_device_quota(self, openid, new_quota):
-        """Update the device quota for a user by openid."""
-        self.cursor.execute("""
-            UPDATE wechat_miniprogram_user_binding_role
-            SET device_quota = ?
-            WHERE openid = ?
-        """, (new_quota, openid))
-        self.conn.commit()
 
     def delete_user_role(self, openid):
         """Delete a user role by openid."""
@@ -216,6 +190,31 @@ class DeviceRoleManager:
             self.conn.commit()
             return True
         return False
+    
+    def bind_user_device(self, openid, device_id):
+        """绑定 openid 和 设备ID，默认 role_id 为 1，device_quota 为 1000"""
+        connection = get_db_connection()
+        if connection is None:
+            return None
+        try:
+            with connection.cursor() as cursor:
+                sql = """
+                INSERT INTO wechat_miniprogram_user_binding_role (openid, mac_address, role_id, device_quota)
+                VALUES (%s, %s, %s, %s)
+                ON DUPLICATE KEY UPDATE device_quota = device_quota;
+                """
+                cursor.execute(sql, (openid, device_id, 1, 1000))
+                connection.commit()
+                logger.info(f"绑定成功: openid={openid}, device_id={device_id}, role_id=1, device_quota=1000")
+                return {"openid": openid, "device_id": device_id, "role_id": 1, "device_quota": 1000}
+        except Exception as e:
+            logger.error(f"绑定失败: {str(e)}")
+            connection.rollback()
+            return None
+        finally:
+            connection.close()   
+
+
 if __name__ == "__main__":
     # 创建表如果不存在
     create_device_role_table_if_not_exists()

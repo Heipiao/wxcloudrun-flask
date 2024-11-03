@@ -36,15 +36,21 @@ def token_required(f):
         token = request.headers.get('Authorization')
         if not token:
             return jsonify({'message': 'Token is missing!'}), 403
+
         try:
             token = token.replace("Bearer ", "")  # 去除 "Bearer " 前缀
-            jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
+            decoded_token = jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
+            openid = decoded_token.get('openid')
+            if not openid:
+                return jsonify({'message': 'Token is invalid!'}), 403
+            # 将 openid 传递给视图函数
+            return f(openid=openid, *args, **kwargs)
         except jwt.ExpiredSignatureError:
             return jsonify({'message': 'Token has expired!'}), 403
         except jwt.InvalidTokenError:
             return jsonify({'message': 'Invalid token!'}), 403
-        return f(*args, **kwargs)
     return decorated
+
 
 @app.route('/')
 def index():
@@ -89,15 +95,14 @@ def wechat_login():
         else:
             return jsonify({'success': False, 'msg': 'Registration failed'}), 500
 
-@app.route('/bind_device', methods=['POST'])
+@app.route('/api/bind_device', methods=['POST'])
 @token_required  # 验证 token
-def bind_device():
+def bind_device(openid):
     data = request.json
-    openid = data.get('openid')
     device_id = data.get('device_id')
 
-    if not openid or not device_id:
-        return jsonify({"message": "openid 和 device_id 是必需的"}), 400
+    if not device_id:
+        return jsonify({"message": "device_id 是必需的"}), 400
 
     result = device_manager.bind_user_device(openid, device_id)
     if result:
