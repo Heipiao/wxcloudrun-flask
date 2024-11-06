@@ -10,7 +10,8 @@ import jwt
 import logging
 from datetime import datetime, timezone, timedelta
 from functools import wraps
-
+# 配置日志
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 from wxcloudrun.user import UserManager 
 user_manager = UserManager()
 device_manager = DeviceRoleManager()
@@ -35,6 +36,7 @@ def token_required(f):
     def decorated(*args, **kwargs):
         token = request.headers.get('Authorization')
         if not token:
+            logging.warning('Token is missing in the request headers.')
             return jsonify({'message': 'Token is missing!'}), 403
 
         try:
@@ -42,13 +44,20 @@ def token_required(f):
             decoded_token = jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
             openid = decoded_token.get('openid')
             if not openid:
+                logging.error('Token does not contain openid.')
                 return jsonify({'message': 'Token is invalid!'}), 403
+            logging.info('Token verified successfully for openid: %s', openid)
             # 将 openid 传递给视图函数
             return f(openid=openid, *args, **kwargs)
         except jwt.ExpiredSignatureError:
+            logging.warning('Token has expired.')
             return jsonify({'message': 'Token has expired!'}), 403
         except jwt.InvalidTokenError:
+            logging.error('Invalid token encountered.')
             return jsonify({'message': 'Invalid token!'}), 403
+        except Exception as e:
+            logging.error('An unexpected error occurred during token verification: %s', str(e))
+            return jsonify({'message': 'An unexpected error occurred!'}), 500
     return decorated
 
 
@@ -102,10 +111,14 @@ def bind_device(openid):
     device_id = data.get('device_id')
 
     if not device_id:
+        logging.error('缺少device_id参数')
         return jsonify({"message": "device_id 是必需的"}), 400
 
+    logging.info(f'尝试绑定设备，用户openid：{openid}，设备ID：{device_id}')
     result = device_manager.bind_user_device(openid, device_id)
     if result:
+        logging.info(f'设备绑定成功，用户openid：{openid}，设备ID：{device_id}')
         return jsonify({"message": "绑定成功", "data": result})
     else:
+        logging.error(f'设备绑定失败，用户openid：{openid}，设备ID：{device_id}')
         return jsonify({"message": "绑定失败"}), 500
