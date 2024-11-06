@@ -44,9 +44,8 @@ def token_required(f):
 
             # 去除 "Bearer " 前缀
             token = token.replace("Bearer ", "").replace("\n", "")
-            logging.info('Token prefix "Bearer" removed.')
+            logging.info('Token prefix "Bearer" removed. %s',token)
 
-            # 打印去除前缀后的token
 
             # 解码token
             decoded_token = jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
