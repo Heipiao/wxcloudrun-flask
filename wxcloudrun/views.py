@@ -43,7 +43,7 @@ def token_required(f):
             logging.info('Original token: %s', token)
 
             # 去除 "Bearer " 前缀
-            token = token.replace("Bearer ", "")
+            token = token.replace("Bearer ", "").replace("\n", "")
             logging.info('Token prefix "Bearer" removed.')
 
             # 打印去除前缀后的token
