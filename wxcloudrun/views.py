@@ -48,7 +48,7 @@ def token_required(f):
 
 
             # 解码token
-            decoded_token = jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
+            decoded_token = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
             logging.info('after decoded_token: %s', decoded_token)
             logging.info('Token decoded successfully.')
 
