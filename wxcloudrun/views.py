@@ -40,9 +40,16 @@ def token_required(f):
             return jsonify({'message': 'Token is missing!'}), 403
 
         try:
-            token = token.replace("Bearer ", "")  # 去除 "Bearer " 前缀
+            token = token.replace("Bearer ", "")
+            logging.info('Token prefix "Bearer" removed.')
+
+            # 解码token
             decoded_token = jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
+            logging.info('Token decoded successfully.')
+
+            # 获取openid
             openid = decoded_token.get('openid')
+
             if not openid:
                 logging.error('Token does not contain openid.')
                 return jsonify({'message': 'Token is invalid!'}), 403
