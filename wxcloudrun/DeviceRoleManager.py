@@ -101,25 +101,49 @@ class DeviceRoleManager:
         finally:
             connection.close()
 
-    def bind_role(self, openid, mac_address, role_id, device_quota):
-        """绑定新的角色"""
+    def bind_role(self, openid, role_id):
+        """根据 openid 绑定角色，更新 role_id，其他字段保持不变"""
         connection = get_db_connection()
         if connection is None:
             return None
         try:
             with connection.cursor() as cursor:
-                sql = """
-                INSERT INTO wechat_miniprogram_user_binding_role (openid, mac_address, role_id, device_quota)
-                VALUES (%s, %s, %s, %s)
+                # 获取当前用户绑定的设备信息
+                sql_get_current_values = """
+                SELECT mac_address, device_quota
+                FROM wechat_miniprogram_user_binding_role
+                WHERE openid = %s
                 """
-                cursor.execute(sql, (openid, mac_address, role_id, device_quota))
-                connection.commit()
-                logger.info(f"绑定角色成功: openid={openid}, mac_address={mac_address}")
-                return {"openid": openid, "mac_address": mac_address, "role_id": role_id, "device_quota": device_quota}
+                cursor.execute(sql_get_current_values, (openid,))
+                current_values = cursor.fetchone()
+
+                if current_values:
+                    mac_address, device_quota = current_values
+                    # 更新角色 id
+                    sql_update_role = """
+                    UPDATE wechat_miniprogram_user_binding_role
+                    SET role_id = %s
+                    WHERE openid = %s AND mac_address = %s
+                    """
+                    cursor.execute(sql_update_role, (role_id, openid, mac_address))
+                    connection.commit()
+                    logger.info(f"角色绑定更新成功: openid={openid}, role_id={role_id}, mac_address={mac_address}")
+                    return {
+                        "message": "suc",  # 绑定成功
+                        "data": {
+                            "openid": openid,
+                            "mac_address": mac_address,
+                            "role_id": role_id,
+                            "device_quota": device_quota
+                        }
+                    }
+                else:
+                    logger.warning(f"未找到用户绑定信息: openid={openid}")
+                    return {"message": "fail"}  # 绑定失败，未找到用户设备信息
         except Exception as e:
             logger.error(f"绑定角色失败: {str(e)}")
             connection.rollback()
-            return None
+            return {"message": "fail"}  # 出现异常，操作失败
         finally:
             connection.close()
 

@@ -150,3 +150,16 @@ def get_mac_addresses(openid):
         logging.error(f'未找到与 openid：{openid} 关联的 mac 地址')
         return jsonify({"message": "未找到 mac 地址"}), 404
 
+@app.route('/api/bind_role', methods=['POST'])
+@token_required  # 验证 token
+def bind_role_endpoint(openid):
+    data = request.json
+    role_id = data.get('role_id')
+
+    if not role_id:
+        logging.error('缺少 role_id 参数')
+        return jsonify({"message": "fail"}), 400  # 请求参数错误，返回 fail
+
+    logging.info(f'尝试绑定角色，用户 openid: {openid}, 角色 ID: {role_id}')
+    result = device_manager.bind_role(openid, role_id)
+    return jsonify(result)  # 直接返回 bind_role 方法的结果
