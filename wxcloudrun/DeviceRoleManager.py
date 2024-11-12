@@ -70,7 +70,7 @@ class DeviceRoleManager:
                 mac_addresses = cursor.fetchall()
                 if mac_addresses:
                     logger.info(f"找到的 mac 地址: {mac_addresses}")
-                    return [mac[0] for mac in mac_addresses]  # 返回一个列表形式的所有 mac 地址
+                    return [mac["mac_address"] for mac in mac_addresses]  # 返回一个列表形式的所有 mac 地址
                 else:
                     logger.info(f"未找到与 openid 关联的 mac 地址: {openid}")
                     return []
