@@ -134,3 +134,19 @@ def bind_device(openid):
     else:
         logging.error(f'设备绑定失败，用户openid：{openid}，设备ID：{device_id}')
         return jsonify({"message": "绑定失败"}), 500
+    
+@app.route('/api/get_mac_addresses', methods=['GET'])
+@token_required  # 验证 token
+def get_mac_addresses(openid):
+    logging.info(f'尝试查找用户openid：{openid} 绑定的所有 mac 地址')
+
+    # 使用 device_manager 查找用户绑定的 mac 地址
+    mac_addresses = device_manager.find_mac_address_by_openid(openid)
+
+    if mac_addresses:
+        logging.info(f'找到的 mac 地址: {mac_addresses}')
+        return jsonify({"message": "成功获取 mac 地址", "data": mac_addresses})
+    else:
+        logging.error(f'未找到与 openid：{openid} 关联的 mac 地址')
+        return jsonify({"message": "未找到 mac 地址"}), 404
+

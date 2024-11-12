@@ -57,6 +57,28 @@ class DeviceRoleManager:
     def __init__(self):
         """初始化"""
         logger.info("DeviceRoleManager 实例已创建")
+    
+    def find_mac_address_by_openid(self, openid):
+        """根据 openid 查找用户的 mac 地址"""
+        connection = get_db_connection()
+        if connection is None:
+            return None
+        try:
+            with connection.cursor() as cursor:
+                sql = "SELECT mac_address FROM wechat_miniprogram_user_binding_role WHERE openid = %s"
+                cursor.execute(sql, (openid,))
+                mac_addresses = cursor.fetchall()
+                if mac_addresses:
+                    logger.info(f"找到的 mac 地址: {mac_addresses}")
+                    return [mac[0] for mac in mac_addresses]  # 返回一个列表形式的所有 mac 地址
+                else:
+                    logger.info(f"未找到与 openid 关联的 mac 地址: {openid}")
+                    return []
+        except Exception as e:
+            logger.error(f"查找 mac 地址失败: {str(e)}")
+            return []
+        finally:
+            connection.close()
 
     def find_user_role(self, openid):
         """根据 openid 查找用户绑定的角色信息"""
