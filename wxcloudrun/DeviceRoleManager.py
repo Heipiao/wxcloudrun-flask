@@ -105,6 +105,7 @@ class DeviceRoleManager:
         """根据 openid 绑定角色，更新 role_id，其他字段保持不变"""
         connection = get_db_connection()
         if connection is None:
+            logger.error("数据库连接失败")
             return None
         try:
             with connection.cursor() as cursor:
@@ -114,11 +115,17 @@ class DeviceRoleManager:
                 FROM wechat_miniprogram_user_binding_role
                 WHERE openid = %s
                 """
+                logger.info(f"执行 SQL: {sql_get_current_values} 参数: {openid}")
                 cursor.execute(sql_get_current_values, (openid,))
                 current_values = cursor.fetchone()
+                logger.info(f"查询结果: {current_values}")
 
                 if current_values:
                     mac_address, device_quota = current_values
+                    if not mac_address:
+                        logger.warning(f"mac_address 为空: openid={openid}")
+                        return {"message": "fail"}
+                    
                     # 更新角色 id
                     sql_update_role = """
                     UPDATE wechat_miniprogram_user_binding_role
@@ -129,7 +136,7 @@ class DeviceRoleManager:
                     connection.commit()
                     logger.info(f"角色绑定更新成功: openid={openid}, role_id={role_id}, mac_address={mac_address}")
                     return {
-                        "message": "suc",  # 绑定成功
+                        "message": "suc",
                         "data": {
                             "openid": openid,
                             "mac_address": mac_address,
@@ -139,13 +146,14 @@ class DeviceRoleManager:
                     }
                 else:
                     logger.warning(f"未找到用户绑定信息: openid={openid}")
-                    return {"message": "fail"}  # 绑定失败，未找到用户设备信息
+                    return {"message": "fail"}
         except Exception as e:
             logger.error(f"绑定角色失败: {str(e)}")
             connection.rollback()
-            return {"message": "fail"}  # 出现异常，操作失败
+            return {"message": "fail"}
         finally:
             connection.close()
+
 
     def update_device_quota(self, openid, mac_address, new_quota):
         """更新用户设备配额"""
@@ -300,10 +308,10 @@ if __name__ == "__main__":
             out = cursor.fetchone()
     print(out)
 
-    # 初始化 DeviceRoleManager 实例
-    device_role_manager = DeviceRoleManager()
-    output = device_role_manager.get_user_role("A01625469232")
-    print(output)
+    # # 初始化 DeviceRoleManager 实例
+    # device_role_manager = DeviceRoleManager()
+    # output = device_role_manager.get_user_role("A01625469232")
+    # print(output)
 
     # # 测试绑定角色功能
     # device_role_manager.bind_role("test_openid", "test_mac_address", 1, 5)

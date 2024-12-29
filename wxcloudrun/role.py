@@ -164,7 +164,7 @@ if __name__ == "__main__":
     role_manager.create_table_if_not_exists()
 
     # 查询现有角色
-    existing_roles = role_manager.get_roles_by_id(1)
+    existing_roles = role_manager.get_roles_by_id(2)
     print(existing_roles)
     # if existing_roles:
     #     for role in existing_roles:
@@ -189,9 +189,9 @@ if __name__ == "__main__":
     #     logger.info(f"新角色已添加，ID: {role_id}")
 
     # # 再次获取所有角色
-    # roles = role_manager.get_roles()
-    # for role in roles:
-    #     logger.info(f"角色: {role['role_name']} - {role['role_title']}")
+    roles = role_manager.get_roles()
+    for role in roles:
+        logger.info(f"角色:  {role['role_id']} = {role['role_name']} - {role['role_title']}")
 
     # # 删除角色
     # if role_id:
