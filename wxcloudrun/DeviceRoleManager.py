@@ -201,12 +201,36 @@ class DeviceRoleManager:
         """, (openid, mac_address, role_id, device_quota))
         self.conn.commit()
 
-    def get_user_role(self, openid):
-        """Get user role information by openid."""
-        self.cursor.execute("""
-            SELECT * FROM wechat_miniprogram_user_binding_role WHERE openid = ?
-        """, (openid,))
-        return self.cursor.fetchone()
+    def get_user_role(self, mac_address):
+        """根据 mac_address 获取用户角色信息"""
+        connection = get_db_connection()
+        if connection is None:
+            return None
+        try:
+            with connection.cursor() as cursor:
+                # 查询绑定的角色信息
+                sql_get_user_role = """
+                SELECT * 
+                FROM wechat_miniprogram_user_binding_role 
+                WHERE mac_address = %s
+                """
+                cursor.execute(sql_get_user_role, (mac_address,))
+                user_role = cursor.fetchone()
+
+                if user_role:
+                    logger.info(f"用户角色信息查询成功: mac_address={mac_address}")
+                    return {
+                        "message": "suc",  # 查询成功
+                        "data": user_role
+                    }
+                else:
+                    logger.warning(f"未找到用户角色信息: mac_address={mac_address}")
+                    return {"message": "fail"}  # 未找到角色信息
+        except Exception as e:
+            logger.error(f"查询用户角色信息失败: {str(e)}")
+            return {"message": "fail"}  # 出现异常，查询失败
+        finally:
+            connection.close()
 
     def delete_user_role(self, openid):
         """Delete a user role by openid."""
@@ -263,24 +287,37 @@ class DeviceRoleManager:
 
 if __name__ == "__main__":
     # 创建表如果不存在
-    create_device_role_table_if_not_exists()
+    #create_device_role_table_if_not_exists()
+    mgr = DeviceRoleManager()
+    connection = get_db_connection()
+    if connection is None:
+        pass
+
+    with connection.cursor() as cursor:
+            cursor.execute("""
+            SELECT * FROM wechat_miniprogram_user_binding_role 
+        """)
+            out = cursor.fetchone()
+    print(out)
 
     # 初始化 DeviceRoleManager 实例
     device_role_manager = DeviceRoleManager()
+    output = device_role_manager.get_user_role("A01625469232")
+    print(output)
 
-    # 测试绑定角色功能
-    device_role_manager.bind_role("test_openid", "test_mac_address", 1, 5)
+    # # 测试绑定角色功能
+    # device_role_manager.bind_role("test_openid", "test_mac_address", 1, 5)
 
-    # 查找用户角色
-    user_role = device_role_manager.find_user_role("test_openid")
-    if user_role:
-        logger.info(f"找到用户角色: {user_role}")
+    # # 查找用户角色
+    # user_role = device_role_manager.find_user_role("test_openid")
+    # if user_role:
+    #     logger.info(f"找到用户角色: {user_role}")
 
-    # 更新设备配额
-    device_role_manager.update_device_quota("test_openid", "test_mac_address", 10)
+    # # 更新设备配额
+    # device_role_manager.update_device_quota("test_openid", "test_mac_address", 10)
 
-    # 减少设备配额
-    device_role_manager.decrement_device_quota("test_openid", "test_mac_address")
+    # # 减少设备配额
+    # device_role_manager.decrement_device_quota("test_openid", "test_mac_address")
 
-    # 删除用户角色
-    device_role_manager.delete_user_role("test_openid", "test_mac_address")
+    # # 删除用户角色
+    # device_role_manager.delete_user_role("test_openid", "test_mac_address")

@@ -184,4 +184,37 @@ def get_roles_top25_endpoint(openid):
     logging.info(f'成功获取前 25 个角色信息')
     return jsonify({"message": "success", "roles": top_roles}), 200
 
+@app.route('/api/get_role_by_mac', methods=['POST'])
+def get_role_by_mac_endpoint():
+    # 获取请求中的 mac_address
+    data = request.get_json()
+    mac_address = data.get('mac_address')
+
+    if not mac_address:
+        logging.error('缺少 mac_address 参数')
+        return jsonify({"message": "Missing mac_address parameter"}), 400
+
+    # 通过 mac_address 获取角色 ID
+    role_info = device_manager.get_user_role(mac_address)  # 使用 device_manager.get_user_role 获取角色信息
+
+    if not role_info:
+        logging.error(f'未找到 mac_address={mac_address} 的角色信息')
+        return jsonify({"message": "Role not found"}), 404
+
+    role_id = role_info.get('role_id')
+
+    if not role_id:
+        logging.error(f'mac_address={mac_address} 未绑定角色')
+        return jsonify({"message": "Role ID not found"}), 404
+
+    # 获取角色详细信息
+    role_details = role_manager.get_roles_by_id(role_id)  # 使用 role_manager.get_roles_by_id 获取角色详细信息
+
+    if not role_details:
+        logging.error(f'未找到 role_id={role_id} 的详细信息')
+        return jsonify({"message": "Role details not found"}), 404
+
+    # 返回角色详细信息
+    logging.info(f'成功获取 mac_address={mac_address} 的角色详细信息')
+    return jsonify({"message": "success", "role_details": role_details}), 200
 

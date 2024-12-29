@@ -108,6 +108,34 @@ class RoleManager:
             return []
         finally:
             connection.close()
+    
+    def get_roles_by_id(self,role_id):
+        """根据角色 ID 获取角色详细信息"""
+        connection = get_db_connection()
+        if connection is None:
+            return None
+        try:
+            with connection.cursor() as cursor:
+                sql_get_role_by_id = """
+                SELECT * 
+                FROM wechat_miniprogram_role_info_details 
+                WHERE role_id = %s
+                """
+                cursor.execute(sql_get_role_by_id, (role_id,))
+                role = cursor.fetchone()
+
+                if role:
+                    logger.info(f"成功获取 role_id={role_id} 的角色详细信息")
+                    return role
+                else:
+                    logger.warning(f"未找到 role_id={role_id} 的角色信息")
+                    return None
+        except Exception as e:
+            logger.error(f"根据角色 ID 获取角色失败: {str(e)}")
+            return None
+        finally:
+            connection.close()
+
 
     def delete_role_by_id(self, role_id):
         """根据角色 ID 删除角色"""
@@ -136,25 +164,26 @@ if __name__ == "__main__":
     role_manager.create_table_if_not_exists()
 
     # 查询现有角色
-    existing_roles = role_manager.get_roles()
-    if existing_roles:
-        for role in existing_roles:
-            logger.info(f"现有角色: {role['role_name']} - {role['role_title']}")
-    else:
-        logger.info("数据库中没有角色记录")
+    existing_roles = role_manager.get_roles_by_id(1)
+    print(existing_roles)
+    # if existing_roles:
+    #     for role in existing_roles:
+    #         logger.info(f"现有角色: {role['role_name']} - {role['role_title']}")
+    # else:
+    #     logger.info("数据库中没有角色记录")
 
-    # 添加角色
-    new_role = {
-        'role_title': 'Hero',
-        'role_prompt': 'Protect the village.',
-        'role_name': 'John',
-        'role_age': 30,
-        'role_character': 'Brave and kind.',
-        'role_introduction': 'A hero who protects his people.',
-        'role_picture': 'hero.jpg',
-        'role_voice': 'hero_voice.mp3',
-        'role_voice_api': 'http://example.com/api/hero-voice'
-    }
+    # # 添加角色
+    # new_role = {
+    #     'role_title': 'Hero',
+    #     'role_prompt': 'Protect the village.',
+    #     'role_name': 'John',
+    #     'role_age': 30,
+    #     'role_character': 'Brave and kind.',
+    #     'role_introduction': 'A hero who protects his people.',
+    #     'role_picture': 'hero.jpg',
+    #     'role_voice': 'hero_voice.mp3',
+    #     'role_voice_api': 'http://example.com/api/hero-voice'
+    # }
     # role_id = role_manager.add_role(new_role)
     # if role_id:
     #     logger.info(f"新角色已添加，ID: {role_id}")
