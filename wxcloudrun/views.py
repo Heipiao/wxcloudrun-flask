@@ -201,7 +201,7 @@ def get_role_by_mac_endpoint():
         logging.error(f'未找到 mac_address={mac_address} 的角色信息')
         return jsonify({"message": "Role not found"}), 404
 
-    role_id = role_info.get('role_id')
+    role_id = role_info.get('data').get('role_id')
 
     if not role_id:
         logging.error(f'mac_address={mac_address} 未绑定角色')
