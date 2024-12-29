@@ -169,7 +169,7 @@ def bind_role_endpoint(openid):
 
 @app.route('/api/get_roles_top25', methods=['POST'])
 @token_required  # 验证 token
-def get_roles_top25_endpoint():
+def get_roles_top25_endpoint(openid):
     # 获取所有角色
     roles = role_manager.get_roles()  # 假设 get_roles 已经实现返回所有角色
     
