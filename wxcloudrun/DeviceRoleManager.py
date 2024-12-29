@@ -270,7 +270,7 @@ class DeviceRoleManager:
         return False
     
     def bind_user_device(self, openid, device_id):
-        """绑定 openid 和 设备ID，默认 role_id 为 1，device_quota 为 1000"""
+        """绑定 openid 和设备ID，默认 role_id 为 1，device_quota 为 1000"""
         connection = get_db_connection()
         if connection is None:
             return None
@@ -279,7 +279,7 @@ class DeviceRoleManager:
                 sql = """
                 INSERT INTO wechat_miniprogram_user_binding_role (openid, mac_address, role_id, device_quota)
                 VALUES (%s, %s, %s, %s)
-                ON DUPLICATE KEY UPDATE device_quota = device_quota;
+                ON DUPLICATE KEY UPDATE mac_address = VALUES(mac_address), role_id = VALUES(role_id), device_quota = VALUES(device_quota);
                 """
                 cursor.execute(sql, (openid, device_id, 1, 1000))
                 connection.commit()
@@ -290,7 +290,8 @@ class DeviceRoleManager:
             connection.rollback()
             return None
         finally:
-            connection.close()   
+            connection.close()
+
 
 
 if __name__ == "__main__":
