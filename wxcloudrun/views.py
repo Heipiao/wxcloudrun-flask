@@ -5,6 +5,7 @@ from wxcloudrun.dao import delete_counterbyid, query_counterbyid, insert_counter
 from wxcloudrun.model import Counters
 from wxcloudrun.response import make_succ_empty_response, make_succ_response, make_err_response
 from wxcloudrun.DeviceRoleManager import DeviceRoleManager
+from wxcloudrun.role import RoleManager
 import requests
 import jwt
 import logging
@@ -15,6 +16,8 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 from wxcloudrun.user import UserManager 
 user_manager = UserManager()
 device_manager = DeviceRoleManager()
+role_manager = RoleManager()
+
 JWT_SECRET = 'your-jwt-secret'  # 替换为实际的 JWT 密钥
 JWT_EXPIRATION_HOURS = 24 * 7
 # 微信小程序配置
@@ -163,3 +166,22 @@ def bind_role_endpoint(openid):
     logging.info(f'尝试绑定角色，用户 openid: {openid}, 角色 ID: {role_id}')
     result = device_manager.bind_role(openid, role_id)
     return jsonify(result)  # 直接返回 bind_role 方法的结果
+
+@app.route('/api/get_roles_top25', methods=['POST'])
+@token_required  # 验证 token
+def get_roles_top25_endpoint():
+    # 获取所有角色
+    roles = role_manager.get_roles()  # 假设 get_roles 已经实现返回所有角色
+    
+    if not roles:
+        logging.error(f'未找到任何角色信息')
+        return jsonify({"message": "No roles found"}), 404
+
+    # 取前 25 个角色
+    top_roles = roles[:25]
+
+    # 返回角色信息
+    logging.info(f'成功获取前 25 个角色信息')
+    return jsonify({"message": "success", "roles": top_roles}), 200
+
+
