@@ -8,6 +8,7 @@ from wxcloudrun.DeviceRoleManager import DeviceRoleManager
 from wxcloudrun.role import RoleManager
 import requests
 import jwt
+import os
 import logging
 from datetime import datetime, timezone, timedelta
 from functools import wraps
@@ -21,8 +22,8 @@ role_manager = RoleManager()
 JWT_SECRET = 'your-jwt-secret'  # 替换为实际的 JWT 密钥
 JWT_EXPIRATION_HOURS = 24 * 7
 # 微信小程序配置
-APP_ID = "wx8446265bd2d968e9"
-APP_SECRET = "dfddc06c807106ae6d67b639dcd926a4"
+APP_ID = os.getenv('APP_ID',"wx8446265bd2d968e9")
+APP_SECRET =  os.getenv('APP_SECRET',"dfddc06c807106ae6d67b639dcd926a4")
 
 
 def generate_token(openid):
