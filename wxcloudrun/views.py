@@ -12,6 +12,8 @@ import os
 import logging
 from datetime import datetime, timezone, timedelta
 from functools import wraps
+import zhipuai
+from zhipuai import ZhipuAI
 # 配置日志
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 from wxcloudrun.user import UserManager 
@@ -24,6 +26,11 @@ JWT_EXPIRATION_HOURS = 24 * 7
 # 微信小程序配置
 APP_ID = os.getenv('APP_ID',"wx8446265bd2d968e9")
 APP_SECRET =  os.getenv('APP_SECRET',"dfddc06c807106ae6d67b639dcd926a4")
+# 初始化智谱 AI 客户端
+client = ZhipuAI(api_key="29b57f9619cb4f689fcea491a7caaa8f.jGwelhUQn2489JdC")  # 请替换为你自己的 API Key
+
+# 存储历史对话信息的字典，键为用户标识，值为消息列表
+conversation_history = {}
 
 
 def generate_token(openid):
@@ -218,4 +225,48 @@ def get_role_by_mac_endpoint():
     # 返回角色详细信息
     logging.info(f'成功获取 mac_address={mac_address} 的角色详细信息')
     return jsonify({"message": "success", "role_details": role_details}), 200
+
+@app.route('/chat', methods=['POST'])
+def chat():
+    try:
+        # 获取请求中的用户标识、新消息和是否开启新对话的标志
+        data = request.get_json()
+        user_id = data.get('user_id')
+        new_message = data.get('message')
+        new_conversation = data.get('new_conversation', False)
+
+        if not user_id or not new_message:
+            return jsonify({"error": "user_id and message are required"}), 400
+
+        # 如果开启新对话，清空该用户的历史对话信息
+        if new_conversation:
+            conversation_history[user_id] = []
+
+        # 检查该用户是否有历史对话信息
+        if user_id not in conversation_history:
+            conversation_history[user_id] = []
+
+        # 将新消息添加到历史对话中
+        conversation_history[user_id].append({"role": "user", "content": new_message})
+
+        # 调用智谱 AI 的聊天接口
+        response = client.chat.completions.create(
+            model="glm-4-air",  # 请根据需要选择模型
+            messages=conversation_history[user_id]
+        )
+
+        # 获取大模型的回复
+        model_response = response.choices[0].message.content
+
+        # 将大模型的回复添加到历史对话中
+        conversation_history[user_id].append({"role": "assistant", "content": model_response})
+
+        # 返回聊天结果
+        return jsonify({
+            "status": "success",
+            "message": model_response
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
